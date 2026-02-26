@@ -1,0 +1,28 @@
+# 외부 프로젝트 (별도 레포)
+gemini-ocr
+
+# 의존성
+node_modules/
+
+# 환경변수 (시크릿 보호)
+.env
+.env.local
+.env.production
+
+# GCP 서비스 계정 키 (절대 커밋 금지)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!pnpm-workspace.yaml
+
+# 빌드 산출물
+dist/
+
+# 에디터
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

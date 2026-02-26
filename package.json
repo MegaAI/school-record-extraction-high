@@ -1,0 +1,14 @@
+{
+    "name": "school-record-extraction",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "pnpm --parallel --filter \"@school-record/*\" dev",
+        "dev:backend": "pnpm --filter @school-record/backend dev",
+        "dev:frontend": "pnpm --filter @school-record/frontend dev"
+    },
+    "workspaces": [
+        "packages/*"
+    ]
+}
