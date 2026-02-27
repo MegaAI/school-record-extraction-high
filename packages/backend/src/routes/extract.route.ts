@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { GeminiFlashService } from '../services/gemini-flash.service.ts';
+import { PipelineService } from '../services/pipeline.service.js';
 
 export const extractRoute = Router();
 
@@ -13,7 +13,7 @@ const upload = multer({
     },
 });
 
-const service = new GeminiFlashService();
+const pipeline = new PipelineService();
 
 extractRoute.post('/extract', upload.single('pdf'), async (req, res) => {
     try {
@@ -23,15 +23,18 @@ extractRoute.post('/extract', upload.single('pdf'), async (req, res) => {
         }
 
         const pdfBase64 = req.file.buffer.toString('base64');
-        console.log(`📄 PDF 수신: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)}MB)`);
+        console.log(`\n📄 PDF 수신: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-        const { data, errors, costBreakdown, durationMs } = await service.extractAll(pdfBase64);
+        const { data, errors, costBreakdown, flashCost, proCost, stage2Cost, durationMs } = await pipeline.runPipeline(pdfBase64);
 
         res.json({
             success: true,
             data,
             errors: Object.keys(errors).length > 0 ? errors : undefined,
             costBreakdown,
+            flashCost,
+            proCost,
+            stage2Cost,
             durationMs,
         });
     } catch (error) {

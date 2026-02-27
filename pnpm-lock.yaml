@@ -10,6 +10,9 @@ importers:
 
   packages/backend:
     dependencies:
+      '@gemini-data-extraction/schema':
+        specifier: workspace:*
+        version: link:../schema
       '@google/genai':
         specifier: ^1.41.0
         version: 1.42.0
@@ -74,6 +77,16 @@ importers:
         version: 6.4.1(@types/node@24.10.13)(tsx@4.21.0)
 
   packages/prompt:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/schema:
+    dependencies:
+      '@google/genai':
+        specifier: ^1.41.0
+        version: 1.42.0
     devDependencies:
       typescript:
         specifier: ^5.7.2

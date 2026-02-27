@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { extractFromPdf, type ExtractResponse, type CostBreakdown } from './api/extract';
+import { extractFromPdf, type ExtractResponse, type CostBreakdown, type ModelCost } from './api/extract';
 import './index.css';
 
 const FIELD_LABELS: Record<string, string> = {
@@ -22,18 +22,43 @@ function fmt(n: number): string {
     return n.toLocaleString();
 }
 
-function CostPanel({ cb, durationMs }: { cb: CostBreakdown; durationMs?: number }) {
+function ModelCostRow({ label, model, cost }: { label: string; model: string; cost: ModelCost }) {
+    return (
+        <div className="model-cost-row">
+            <div className="model-cost-header">
+                <span className="model-badge">{model}</span>
+                <span className="model-cost-label">{label}</span>
+                <span className="model-cost-total">${cost.totalUsd.toFixed(6)}</span>
+            </div>
+            <div className="model-cost-detail">
+                <span>입력 ${cost.inputUsd.toFixed(6)}</span>
+                <span>출력 ${cost.outputUsd.toFixed(6)}</span>
+                <span>캐시읽기 ${cost.cacheReadUsd.toFixed(6)}</span>
+            </div>
+        </div>
+    );
+}
+
+function CostPanel({ cb, flashCost, proCost, stage2Cost, durationMs }: {
+    cb: CostBreakdown;
+    flashCost?: ModelCost;
+    proCost?: ModelCost;
+    stage2Cost?: ModelCost;
+    durationMs?: number;
+}) {
     const { usage, cost } = cb;
     return (
         <div className="cost-panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h2 style={{ marginBottom: 0 }}>� 분석 요약</h2>
+                <h2 style={{ marginBottom: 0 }}>◈ 분석 요약</h2>
                 {durationMs && (
                     <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
                         ⏱️ 소요시간: <b style={{ color: '#e2e8f0', fontSize: '1rem' }}>{(durationMs / 1000).toFixed(1)}초</b>
                     </span>
                 )}
             </div>
+
+            {/* 토큰 사용량 그리드 */}
             <div className="cost-grid">
                 <div className="cost-item">
                     <span className="cost-label">입력 토큰</span>
@@ -56,6 +81,36 @@ function CostPanel({ cb, durationMs }: { cb: CostBreakdown; durationMs?: number 
                     <span className="cost-sub">${cost.cacheReadUsd.toFixed(6)}</span>
                 </div>
             </div>
+
+            {/* 모델별 비용 breakdown */}
+            {(flashCost || proCost || stage2Cost) && (
+                <div className="model-cost-section">
+                    <div className="model-cost-title">모델별 비용 내역</div>
+                    {flashCost && (
+                        <ModelCostRow
+                            label="Stage 1"
+                            model="Gemini 3 Flash"
+                            cost={flashCost}
+                        />
+                    )}
+                    {proCost && (
+                        <ModelCostRow
+                            label="Stage 1"
+                            model="Gemini 2.5 Pro (성적)"
+                            cost={proCost}
+                        />
+                    )}
+                    {stage2Cost && (
+                        <ModelCostRow
+                            label="Stage 2"
+                            model="Gemini 3 Flash (분류)"
+                            cost={stage2Cost}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* 합산 총 비용 */}
             <div className="cost-total">
                 <span>총 비용</span>
                 <div>
@@ -138,7 +193,10 @@ function App() {
             {status === 'loading' && (
                 <div className="loading-box">
                     <div className="spinner" />
-                    <p>분석 중... ({Object.keys(FIELD_LABELS).length}개 필드 병렬 처리)</p>
+                    <p>
+                        2-Stage 분석 중...<br />
+                        <small style={{ color: '#94a3b8' }}>Stage 1: 순수 텍스트 추출 ➔ Stage 2: 분류 코드 분리 유추</small>
+                    </p>
                 </div>
             )}
 
@@ -146,7 +204,15 @@ function App() {
 
             {status === 'success' && result && (
                 <>
-                    {result.costBreakdown && <CostPanel cb={result.costBreakdown} durationMs={result.durationMs} />}
+                    {result.costBreakdown && (
+                        <CostPanel
+                            cb={result.costBreakdown}
+                            flashCost={result.flashCost}
+                            proCost={result.proCost}
+                            stage2Cost={result.stage2Cost}
+                            durationMs={result.durationMs}
+                        />
+                    )}
 
                     {result.data && (
                         <div className="result-section">
