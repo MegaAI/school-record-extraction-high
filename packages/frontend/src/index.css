@@ -262,3 +262,70 @@ header p {
   font-size: 0.9rem;
   color: #94a3b8;
 }
+
+/* 모델별 비용 내역 */
+.model-cost-section {
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  background: #0d1b2a;
+}
+
+.model-cost-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.model-cost-row {
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.model-cost-row:last-child {
+  margin-bottom: 0;
+}
+
+.model-cost-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.model-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.model-cost-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  flex: 1;
+}
+
+.model-cost-total {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+}
+
+.model-cost-detail {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.72rem;
+  color: #475569;
+  padding-left: 0.2rem;
+}
