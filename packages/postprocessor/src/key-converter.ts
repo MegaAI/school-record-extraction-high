@@ -1,0 +1,81 @@
+/** 한글 키 → 영문 키 단순 변환 (STRING: "", NUMBER: 0, null 없음) */
+export function convertToEnglishKeys(d: any): any {
+    return {
+        activities: {
+            창의적_체험활동상황: (d.activities?.창의적_체험활동상황 ?? []).map((i: any) => ({
+                MEA_MEM_GRD: i.학년 ?? 0,
+                MEA_NM: i.활동명 ?? '',
+                MEA_KBN_CD1: i.활동_구분_코드 ?? '',
+                MEA_KBN_CD2: i.세부_분야_코드 ?? '',
+                MEA_JOB_NM: i.진로희망 ?? '',
+                MEA_JOB_CD: i.직업_분야_분류코드 ?? '',
+                MEA_ACT_TERM: i.시간 ?? '',
+                MEA_ACT_DTL: i.특기사항 ?? '',
+            })),
+            봉사활동실적: (d.activities?.봉사활동실적 ?? []).map((i: any) => ({
+                MES_MEM_GRD_SER: i.학년 ?? 0,
+                MES_PLACE_NM_SER: i.장소_주관기관명 ?? '',
+                MES_PLACE_CD_SER: i.봉사활동코드 ?? '',
+                MES_SER_DTL_SER: i.특기사항 ?? '',
+                MES_SER_TIME_SER: i.시간 ?? 0,
+                MES_NM_SER: i.활동명 ?? '',
+            })),
+        },
+        attendance: (d.attendance?.attendance ?? []).map((i: any) => ({
+            ME_MEM_GRD: i.학년 ?? 0,
+            ME_STD_DAY: i.수업일수 ?? 0,
+            ME_ABS_DIS: i.결석일수?.질병 ?? 0,
+            ME_ABS_REF: i.결석일수?.미인정 ?? 0,
+            ME_ABS_ETC: i.결석일수?.기타 ?? 0,
+            ME_LAT_DIS: i.지각?.질병 ?? 0,
+            ME_LAT_REF: i.지각?.미인정 ?? 0,
+            ME_LAT_ETC: i.지각?.기타 ?? 0,
+            ME_ERL_DIS: i.조퇴?.질병 ?? 0,
+            ME_ERL_REF: i.조퇴?.미인정 ?? 0,
+            ME_ERL_ETC: i.조퇴?.기타 ?? 0,
+            ME_NOP_DIS: i.결과?.질병 ?? 0,
+            ME_NOP_REF: i.결과?.미인정 ?? 0,
+            ME_NOP_ETC: i.결과?.기타 ?? 0,
+        })),
+        awards: (d.awards?.awards ?? []).map((i: any) => ({
+            MES_KBN: i.활동_구분_코드 ?? '',
+            MES_MEM_GRD: i.학년 ?? 0,
+            MES_TERM_KBN: i.학기 ?? 0,
+            MES_LRG_CD: i.분야_코드 ?? '',
+            MES_SML_CD: i.교내_교외_구분코드 ?? '',
+            MES_SUSANG_ORG: i.수여기관 ?? '',
+            MES_SUSANG_DTL: i.수상명 ?? '',
+            MES_NO: i.등급위 ?? '',
+            MES_ACQ_DT: i.수상연월일 ?? '',
+            MES_STU_CNT: i.참가대상_참가인원 ?? '',
+        })),
+        behavior_comments: (d.behavior_comments?.behavior_comments ?? []).map((i: any) => ({
+            MED_MEM_GRD: i.학년 ?? 0,
+            MED_SUB_DTL: i.행동특성_및_종합의견 ?? '',
+        })),
+        license: {
+            자격증_및_인증_취득상황: (d.license?.license?.자격증_및_인증_취득상황 ?? []).map((i: any) => ({
+                MEL_KBN: i.구분 ?? '',
+                MEL_LRG_CD: i.분야_코드 ?? '',
+                MEL_SML_CD: i.교내_교외_구분코드 ?? '',
+                MEL_SUSANG_DTL: i.명칭_또는_종류 ?? '',
+                MEL_NO: i.번호_또는_내용 ?? '',
+                MEL_ACQ_DT: i.취득년월일 ?? '',
+                MEL_SUSANG_ORG: i.발급기관 ?? '',
+            })),
+        },
+        reading_activities: (d.reading_activities?.reading_activities ?? []).map((i: any) => ({
+            MER_LRG_CD: i.학년 ?? '',
+            MER_SUB_NM: i.과목또는영역 ?? '',
+            MER_SML_CD: i.독서_분야코드 ?? '',
+            MER_TITLE: i.도서명 ?? '',
+            MER_MEMO: i.독서활동상황 ?? '',
+        })),
+        student_grades: d.student_grades?.student_grades ?? [],
+        subject_details: (d.subject_details?.subject_details ?? []).map((i: any) => ({
+            MMD_MEM_GRD: i.학년 ?? 0,
+            MMD_SUB_NM: typeof i.과목명 === 'string' ? i.과목명.replace(/\s+/g, '') : (i.과목명 ?? ''),
+            MMD_SUB_DTL: i.세부능력특기사항 ?? '',
+        })),
+    };
+}

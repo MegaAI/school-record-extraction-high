@@ -9,6 +9,7 @@
         "start": "node dist/server.js"
     },
     "dependencies": {
+        "@gemini-data-extraction/postprocessor": "workspace:*",
         "@gemini-data-extraction/schema": "workspace:*",
         "@google/genai": "^1.41.0",
         "cors": "^2.8.5",

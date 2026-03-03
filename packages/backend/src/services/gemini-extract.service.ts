@@ -66,6 +66,10 @@ export class GeminiExtractService {
                         cachedContent: cachedContentName_3flash,
                         temperature: 0,
                         maxOutputTokens: 65536,
+                        thinkingConfig: {
+                            thinkingLevel: 'LOW',
+                            includeThoughts: false,
+                        } as any,
                     },
                 });
 

@@ -44,7 +44,9 @@ export function isRetriable(error: unknown): boolean {
             msg.includes('503') ||
             msg.includes('rate limit') ||
             msg.includes('quota') ||
-            msg.includes('timeout')
+            msg.includes('timeout') ||
+            msg.includes('resource_exhausted') ||
+            msg.includes('throttl')
         );
     }
     return false;
@@ -75,7 +77,7 @@ export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): CostB
         outputUsd,
         cacheReadUsd,
         totalUsd,
-        totalKrw: totalUsd * 1_450,
+        totalKrw: totalUsd * 1_350,
     };
 }
 

@@ -111,6 +111,27 @@ header p {
   background: #334155;
 }
 
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  background: linear-gradient(135deg, #065f46, #047857);
+  color: #6ee7b7;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
 /* 로딩 */
 .loading-box {
   display: flex;

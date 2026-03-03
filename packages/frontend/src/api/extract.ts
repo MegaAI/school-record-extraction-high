@@ -26,9 +26,9 @@ export interface ExtractResponse {
     data?: Record<string, unknown>;
     errors?: Record<string, string>;
     costBreakdown?: CostBreakdown;
-    flashCost?: ModelCost;
-    proCost?: ModelCost;
-    stage2Cost?: ModelCost;
+    stage1Flash?: CostBreakdown;
+    stage1Pro?: CostBreakdown;
+    stage2Flash?: CostBreakdown;
     durationMs?: number;
     error?: string;
 }
