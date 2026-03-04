@@ -5,7 +5,7 @@
  * - 과목명에서 띄어쓰기(공백) 및 중점(·, ．) 제거
  */
 
-const INTERNAL_REVIEW_KEYWORD = '내부검토';
+const INTERNAL_REVIEW_KEYWORD_COMPRESSED = '내부검토';
 
 // 제거 대상: 공백 + 중점(U+00B7 가운뎃점, U+FF0E 전각마침표, U+30FB 가타카나 중점)
 const SUBJECT_NAME_REMOVE_REGEX = /[\s·．・]/g;
@@ -26,7 +26,7 @@ export function postprocessSubjectDetails(items: unknown[] | undefined | null): 
             const record = item as Record<string, unknown>;
             const text = record['세부능력특기사항'];
             if (typeof text !== 'string') return true;
-            return !text.includes(INTERNAL_REVIEW_KEYWORD);
+            return !text.replace(/\s+/g, '').includes(INTERNAL_REVIEW_KEYWORD_COMPRESSED);
         })
         .map(item => {
             if (!item || typeof item !== 'object') return item;

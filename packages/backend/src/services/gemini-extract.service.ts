@@ -57,6 +57,8 @@ export class GeminiExtractService {
     ): Promise<Stage1FieldResult> {
         const prompt = STAGE_1_PROMPTS[fieldKey];
 
+        const thinkingLevel = fieldKey === 'subject_details' ? 'HIGH' : 'LOW';
+
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
                 const response = await this.genAI.models.generateContent({
@@ -67,7 +69,7 @@ export class GeminiExtractService {
                         temperature: 0,
                         maxOutputTokens: 65536,
                         thinkingConfig: {
-                            thinkingLevel: 'LOW',
+                            thinkingLevel,
                             includeThoughts: false,
                         } as any,
                     },
@@ -195,6 +197,12 @@ export class GeminiExtractService {
                     systemInstruction: SYSTEM_PROMPT,
                     tools: [{ codeExecution: {} }],
                     ttl: '600s',
+                    ...({
+                        labels: {
+                            feature: "school-record_ai-report",
+                            environment: "test"
+                        }
+                    } as any)
                 },
             });
 
@@ -212,6 +220,12 @@ export class GeminiExtractService {
                     }],
                     systemInstruction: STUDENT_GRADES_SYSTEM_PROMPT,
                     ttl: '600s',
+                    ...({
+                        labels: {
+                            feature: "school-record_ai-report",
+                            environment: "test"
+                        }
+                    } as any)
                 },
             });
 

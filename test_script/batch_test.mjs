@@ -25,8 +25,12 @@ function safeFolderName(filename) {
 
 /** PDF 파일 목록 조회 */
 function getPdfFiles() {
-    const files = fs.readdirSync(SAMPLES_DIR).filter(f => f.toLowerCase().endsWith('.pdf'));
-    console.log(`📁 샘플 폴더에서 PDF ${files.length}개 발견\n`);
+    const files = [
+        '샘플30.pdf',
+        '샘플31.pdf',
+        '샘플31_Failed to fetch.pdf'
+    ];
+    console.log(`📁 배열 강제 지정: 지정된 PDF 처리합니다.\n`);
     return files;
 }
 

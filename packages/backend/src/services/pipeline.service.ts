@@ -26,6 +26,26 @@ export class PipelineService {
     }> {
         const startTime = Date.now();
 
+        // --- 전처리 (Pre-processing) ---
+        let processedPdf = pdfBase64;
+        try {
+            const sizeImport = await import('@gemini-data-extraction/preprocessor');
+            const { isPdfSizeExceeded, compressPdf } = sizeImport;
+
+            if (isPdfSizeExceeded(processedPdf)) {
+                console.log('📦 [PreProcess] PDF 용량 초과 감지. 압축을 진행합니다...');
+                const result = await compressPdf(processedPdf);
+                if (result.success && result.compressedData) {
+                    console.log(`✅ [PreProcess] PDF 압축 성공 (레벨: ${result.compressionLevel}): ${(result.originalSize / 1024 / 1024).toFixed(1)}MB -> ${(result.compressedSize! / 1024 / 1024).toFixed(1)}MB`);
+                    processedPdf = result.compressedData;
+                } else {
+                    console.warn(`⚠️ [PreProcess] PDF 압축 실패. 원본으로 진행합니다: ${result.error}`);
+                }
+            }
+        } catch (err) {
+            console.warn(`⚠️ [PreProcess] 전처리 모듈 로드 또는 실행 중 에러 발생:`, err);
+        }
+
         const stage2Promises: Promise<any>[] = [];
 
         const onFieldDone = (result: any) => {
@@ -64,7 +84,7 @@ export class PipelineService {
         };
 
         console.log('--- [Pipeline] Stage 1 (텍스트 추출) 시작 ---');
-        const stage1Result = await this.extractService.executeStage1(pdfBase64, onFieldDone);
+        const stage1Result = await this.extractService.executeStage1(processedPdf, onFieldDone);
 
         if (Object.keys(stage1Result.data).length === 0 && Object.keys(stage1Result.errors).length > 0) {
             console.error('--- [Pipeline] Stage 1 이 모두 실패하여 Stage 2를 진행하지 않습니다 ---');
