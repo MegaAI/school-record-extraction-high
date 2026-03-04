@@ -83,16 +83,30 @@ export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): CostB
 
 export function extractTextFromResponse(response: unknown): string {
     const r = response as Record<string, unknown>;
-    if (typeof r?.text === 'string' && r.text.trim().length > 0) return r.text;
+
+    // 1) SDK 내부의 text getter를 호출하면 CodeExecutionResult 등 땜에 경고(console.warn) 발생.
+    // 우리는 parts 배열에서 순수 text 부분만 가져오도록 자체 처리.
     const candidates = r?.candidates as Array<Record<string, unknown>> | undefined;
-    const parts = (candidates?.[0]?.content as Record<string, unknown>)?.parts as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(parts)) {
-        const textParts = parts.filter(
-            (p) => typeof p?.text === 'string' && !p?.executableCode && !p?.codeExecutionResult
-        );
-        const last = textParts[textParts.length - 1];
-        if (last && typeof last.text === 'string') return last.text;
+    if (Array.isArray(candidates) && candidates.length > 0) {
+        const content = candidates[0].content as Record<string, unknown> | undefined;
+        const parts = content?.parts as Array<Record<string, unknown>> | undefined;
+
+        if (Array.isArray(parts)) {
+            const texts = parts
+                .filter(p => typeof p.text === 'string')
+                .map(p => p.text as string);
+
+            if (texts.length > 0) {
+                return texts.join('').trim();
+            }
+        }
     }
+
+    // 2) Fallback: 만약 parts가 없거나 빈 문자열이면 원래 로직대로 getter 호출
+    if (typeof r?.text === 'string') {
+        return (r.text as string).trim();
+    }
+
     return '';
 }
 

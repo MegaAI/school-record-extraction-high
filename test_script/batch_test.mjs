@@ -24,15 +24,55 @@ function safeFolderName(filename) {
 }
 
 /** PDF 파일 목록 조회 */
+// function getPdfFiles() {
+//     const files = [
+//         '샘플30.pdf',
+//         '샘플31.pdf',
+//         '샘플31_Failed to fetch.pdf'
+//     ];
+//     console.log(`📁 배열 강제 지정: 지정된 PDF 처리합니다.\n`);
+//     return files;
+// }
+
 function getPdfFiles() {
-    const files = [
-        '샘플30.pdf',
-        '샘플31.pdf',
-        '샘플31_Failed to fetch.pdf'
+    const rawList = [
+        // 1
+        // '샘플09_동아리 활동 2개', '샘플15', '샘플37', '샘플10', '샘플_3-2까지_자격증O',
+        // '샘플31', '샘플04', '샘플01_세특 1,2학기 구분', /*'샘플35',*/
+
+        // 2
+        // '샘플02',
+        // /*'샘플22_진로탐색중',*/ /*'샘플21',*/ '2022 개정_1-2까지', 
+
+        // 2-1, 용량 10MB 넘는 파일
+        // '샘플31',
+
+        // 3
+        // '샘플32-------독서, 진로활동 1,2학기 구분', '2022 개정_1-1까지(4)', '2022 개정_1-1까지(1)', '샘플_3-1까지',
+        // '샘플_2-2까지', '샘플36', '2022 개정_1-1까지(3)', '샘플34',
+
+        // 4
+        '2022 개정_1-1까지(5)', '3-2까지_독서활동콤마연결',
+        '샘플_3-2까지', 'NEIS (학부모) 학생부_2022졸업자_개인정보삭제', '샘플11'
     ];
-    console.log(`📁 배열 강제 지정: 지정된 PDF 처리합니다.\n`);
+    // 중복 제거 및 .pdf 붙이기
+    const files = [...new Set(rawList.map(name => name.toLowerCase().endsWith('.pdf') ? name : name + '.pdf'))];
+    console.log(`📁 배열 강제 지정: 총 ${files.length}개의 PDF를 처리합니다.\n`);
     return files;
 }
+
+// function getPdfFiles() {
+//     const failedList = [
+//         '샘플01_세특 1,2학기 구분.pdf',
+//         // '샘플35.pdf',
+//         '샘플22_진로탐색중.pdf',
+//         '샘플32-------독서, 진로활동 1,2학기 구분.pdf',
+//         '샘플_2-2까지.pdf',
+//         '샘플_3-1까지.pdf'
+//     ];
+//     console.log(`📁 실패 항목 재처리: 총 ${failedList.length}개의 PDF를 처리합니다.\n`);
+//     return failedList;
+// }
 
 /** 단일 PDF 파일 추출 API 호출 */
 async function extractPdf(filePath) {
@@ -109,33 +149,45 @@ async function main() {
     const pdfFiles = getPdfFiles();
     const results = { success: [], failed: [] };
 
-    for (let i = 0; i < pdfFiles.length; i++) {
-        const filename = pdfFiles[i];
-        const filePath = path.join(SAMPLES_DIR, filename);
-        const folderName = safeFolderName(filename);
+    // 3개씩 청크 분할
+    const chunkSize = 7;
+    const chunks = [];
+    for (let i = 0; i < pdfFiles.length; i += chunkSize) {
+        chunks.push(pdfFiles.slice(i, i + chunkSize));
+    }
 
-        console.log(`\n[${i + 1}/${pdfFiles.length}] 📄 처리 중: ${filename}`);
+    for (let c = 0; c < chunks.length; c++) {
+        const chunk = chunks[c];
+        console.log(`\n=== 묶음 [${c + 1}/${chunks.length}] 병렬 처리 시작 (${chunk.length}개) ===`);
 
-        const start = Date.now();
-        try {
-            const result = await extractPdf(filePath);
-            const elapsed = Date.now() - start;
+        await Promise.all(chunk.map(async (filename, idx) => {
+            const index = c * chunkSize + idx;
+            const filePath = path.join(SAMPLES_DIR, filename);
+            const folderName = safeFolderName(filename);
 
-            const cost = result.costBreakdown?.cost;
-            console.log(`   ✅ 완료 (${(elapsed / 1000).toFixed(1)}초) | $${cost?.totalUsd?.toFixed(6) ?? '?'} ≈ ₩${cost?.totalKrw?.toFixed(0) ?? '?'}`);
+            console.log(`[${index + 1}/${pdfFiles.length}] 📄 처리 시작: ${filename}`);
 
-            saveResult(folderName, result, elapsed);
-            results.success.push(filename);
-        } catch (err) {
-            const elapsed = Date.now() - start;
-            console.error(`   ❌ 실패 (${(elapsed / 1000).toFixed(1)}초): ${err.message}`);
-            saveError(folderName, err.message);
-            results.failed.push({ filename, error: err.message });
-        }
+            const start = Date.now();
+            try {
+                const result = await extractPdf(filePath);
+                const elapsed = Date.now() - start;
 
-        // 연속 호출 간 throttle 방지 대기 (5초)
-        if (i < pdfFiles.length - 1) {
-            console.log('   ⏳ 5초 대기 중...');
+                const cost = result.costBreakdown?.cost;
+                console.log(`   ✅ 완료 (${(elapsed / 1000).toFixed(1)}초) | $${cost?.totalUsd?.toFixed(6) ?? '?'} ≈ ₩${cost?.totalKrw?.toFixed(0) ?? '?'} [${filename}]`);
+
+                saveResult(folderName, result, elapsed);
+                results.success.push(filename);
+            } catch (err) {
+                const elapsed = Date.now() - start;
+                console.error(`   ❌ 실패 (${(elapsed / 1000).toFixed(1)}초): ${err.message} [${filename}]`);
+                saveError(folderName, err.message);
+                results.failed.push({ filename, error: err.message });
+            }
+        }));
+
+        // 연속 호출 간 throttle 방지 대기 (5초) (마지막 묶음 제외)
+        if (c < chunks.length - 1) {
+            console.log('   ⏳ 병렬 처리 후 5초 대기 중...');
             await new Promise(r => setTimeout(r, 5000));
         }
     }

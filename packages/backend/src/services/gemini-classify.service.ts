@@ -166,6 +166,7 @@ export class GeminiClassifyService {
                     contents: [{ role: 'user', parts: [{ text: textContent }] }],
                     config: {
                         temperature: 0,
+                        seed: 42,
                         maxOutputTokens: 16384,
                         thinkingConfig: {
                             thinkingLevel: 'LOW',
@@ -173,6 +174,12 @@ export class GeminiClassifyService {
                         } as any,
                         responseMimeType: 'application/json',
                         responseSchema: STAGE_2_SCHEMAS[fieldKey] as any,
+                        ...({
+                            labels: {
+                                feature: "school-record_data-extraction",
+                                environment: "test"
+                            }
+                        } as any),
                     },
                 });
 

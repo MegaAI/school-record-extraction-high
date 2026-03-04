@@ -155,7 +155,7 @@ export interface CompressPdfResult {
 }
 
 const DEFAULT_OPTIONS: Required<CompressPdfOptions> = {
-    targetDpi: 170,
+    targetDpi: 200,
     jpegQuality: 95,
     maxSizeBytes: 10 * 1024 * 1024, // 10MB
 };
@@ -182,7 +182,7 @@ export async function compressPdf(
     // 재시도 레벨 정의 (순차적으로 적용)
     const compressionLevels = [
         { dpi: opts.targetDpi, quality: opts.jpegQuality }, // Level 1 (사용자 지정 또는 기본값)
-        { dpi: 150, quality: 95 },                          // Level 2 (화질 우선 재시도)
+        { dpi: 180, quality: 95 },                          // Level 2 (화질 우선 재시도)
     ];
 
     let lastResult: CompressPdfResult | null = null;

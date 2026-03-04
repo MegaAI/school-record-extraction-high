@@ -57,7 +57,12 @@ export class GeminiExtractService {
     ): Promise<Stage1FieldResult> {
         const prompt = STAGE_1_PROMPTS[fieldKey];
 
-        const thinkingLevel = fieldKey === 'subject_details' ? 'HIGH' : 'LOW';
+        let thinkingLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+        if (fieldKey === 'subject_details') {
+            thinkingLevel = 'HIGH';
+        } else if (fieldKey === 'volunteer_activities') {
+            thinkingLevel = 'MEDIUM';
+        }
 
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
@@ -67,11 +72,18 @@ export class GeminiExtractService {
                     config: {
                         cachedContent: cachedContentName_3flash,
                         temperature: 0,
+                        seed: 42,
                         maxOutputTokens: 65536,
                         thinkingConfig: {
                             thinkingLevel,
                             includeThoughts: false,
                         } as any,
+                        ...({
+                            labels: {
+                                feature: "school-record_data-extraction",
+                                environment: "test"
+                            }
+                        } as any),
                     },
                 });
 
@@ -136,6 +148,12 @@ export class GeminiExtractService {
                                 student_grades: schoolGradeSchema.properties.student_grades
                             },
                         },
+                        ...({
+                            labels: {
+                                feature: "school-record_data-extraction",
+                                environment: "test"
+                            }
+                        } as any),
                     },
                 });
 
@@ -199,7 +217,7 @@ export class GeminiExtractService {
                     ttl: '600s',
                     ...({
                         labels: {
-                            feature: "school-record_ai-report",
+                            feature: "school-record_data-extraction",
                             environment: "test"
                         }
                     } as any)
@@ -222,7 +240,7 @@ export class GeminiExtractService {
                     ttl: '600s',
                     ...({
                         labels: {
-                            feature: "school-record_ai-report",
+                            feature: "school-record_data-extraction",
                             environment: "test"
                         }
                     } as any)
