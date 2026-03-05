@@ -23,6 +23,7 @@ export class PipelineService {
         stage1ProBreakdown: CostBreakdown;
         stage2Breakdown: CostBreakdown;
         durationMs: number;
+        fieldDurationMs: Record<string, number>;
     }> {
         const startTime = Date.now();
 
@@ -47,6 +48,10 @@ export class PipelineService {
         }
 
         const stage2Promises: Promise<any>[] = [];
+
+        // 필드별 소요시간 추적
+        const fieldStartTimes = new Map<string, number>();
+        const fieldDurationMs: Record<string, number> = {};
 
         const onFieldDone = (result: any) => {
             if (result.error || !result.data) return;
@@ -83,8 +88,25 @@ export class PipelineService {
             }
         };
 
+        // extractField에 fieldStartTimes 주입을 위한 wrapper
+        const wrappedOnFieldDone = (result: any) => {
+            const started = fieldStartTimes.get(result.fieldKey);
+            if (started !== undefined) {
+                fieldDurationMs[result.fieldKey] = Date.now() - started;
+            }
+            onFieldDone(result);
+        };
+
+        // 필드별 시작시간 기록: executeStage1 직전에 각 fieldKey를 등록
+        const ALL_TRACKED_FIELDS = [
+            'attendance', 'autonomous_activities', 'club_activities', 'career_activities',
+            'volunteer_activities', 'awards', 'license', 'reading_activities',
+            'behavior_comments', 'subject_details', 'student_grades'
+        ];
+        ALL_TRACKED_FIELDS.forEach(k => fieldStartTimes.set(k, Date.now()));
+
         console.log('--- [Pipeline] Stage 1 (텍스트 추출) 시작 ---');
-        const stage1Result = await this.extractService.executeStage1(processedPdf, onFieldDone);
+        const stage1Result = await this.extractService.executeStage1(processedPdf, wrappedOnFieldDone);
 
         if (Object.keys(stage1Result.data).length === 0 && Object.keys(stage1Result.errors).length > 0) {
             console.error('--- [Pipeline] Stage 1 이 모두 실패하여 Stage 2를 진행하지 않습니다 ---');
@@ -102,6 +124,7 @@ export class PipelineService {
                 stage1ProBreakdown: { usage: stage1Result.proUsage, cost: proCost },
                 stage2Breakdown: { usage: { promptTokens: 0, candidateTokens: 0, thinkingTokens: 0, cachedTokens: 0, totalTokens: 0 }, cost: { inputUsd: 0, outputUsd: 0, cacheReadUsd: 0, totalUsd: 0, totalKrw: 0 } },
                 durationMs: Date.now() - startTime,
+                fieldDurationMs,
             };
         }
 
@@ -235,6 +258,7 @@ export class PipelineService {
             stage1ProBreakdown,
             stage2Breakdown,
             durationMs,
+            fieldDurationMs,
         };
     }
 }
