@@ -61,10 +61,11 @@ function ModelCostRow({ label, model, data }: { label: string; model: string; da
     );
 }
 
-function CostPanel({ cb, stage1Flash, stage1Pro, stage2Flash, durationMs }: {
+function CostPanel({ cb, stage1Flash, stage1Pro, stage1Pro31, stage2Flash, durationMs }: {
     cb: CostBreakdown;
     stage1Flash?: CostBreakdown;
     stage1Pro?: CostBreakdown;
+    stage1Pro31?: CostBreakdown;
     stage2Flash?: CostBreakdown;
     durationMs?: number;
 }) {
@@ -81,7 +82,7 @@ function CostPanel({ cb, stage1Flash, stage1Pro, stage2Flash, durationMs }: {
             </div>
 
             {/* 모델별 비용 breakdown */}
-            {(stage1Flash || stage1Pro || stage2Flash) && (
+            {(stage1Flash || stage1Pro || stage1Pro31 || stage2Flash) && (
                 <div className="model-cost-section">
                     <div className="model-cost-title">모델별 비용 내역</div>
                     {stage1Flash && (
@@ -96,6 +97,13 @@ function CostPanel({ cb, stage1Flash, stage1Pro, stage2Flash, durationMs }: {
                             label="Stage 1"
                             model="Gemini 2.5 Pro (성적)"
                             data={stage1Pro}
+                        />
+                    )}
+                    {stage1Pro31 && (
+                        <ModelCostRow
+                            label="Stage 1"
+                            model="Gemini 3.1 Pro (세특)"
+                            data={stage1Pro31}
                         />
                     )}
                     {stage2Flash && (
@@ -224,6 +232,7 @@ function App() {
                             cb={result.costBreakdown}
                             stage1Flash={result.stage1Flash}
                             stage1Pro={result.stage1Pro}
+                            stage1Pro31={result.stage1Pro31}
                             stage2Flash={result.stage2Flash}
                             durationMs={result.durationMs}
                         />

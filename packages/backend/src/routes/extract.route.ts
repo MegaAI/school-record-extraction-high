@@ -25,7 +25,7 @@ extractRoute.post('/extract', upload.single('pdf'), async (req, res) => {
         const pdfBase64 = req.file.buffer.toString('base64');
         console.log(`\n📄 PDF 수신: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-        const { data, errors, costBreakdown, stage1FlashBreakdown, stage1ProBreakdown, stage2Breakdown, durationMs, fieldDurationMs } = await pipeline.runPipeline(pdfBase64);
+        const { data, errors, costBreakdown, stage1FlashBreakdown, stage1ProBreakdown, stage1Pro31Breakdown, stage2Breakdown, durationMs, fieldDurationMs } = await pipeline.runPipeline(pdfBase64);
 
         res.json({
             success: true,
@@ -34,6 +34,7 @@ extractRoute.post('/extract', upload.single('pdf'), async (req, res) => {
             costBreakdown,
             stage1Flash: stage1FlashBreakdown,
             stage1Pro: stage1ProBreakdown,
+            stage1Pro31: stage1Pro31Breakdown,
             stage2Flash: stage2Breakdown,
             durationMs,
             fieldDurationMs,

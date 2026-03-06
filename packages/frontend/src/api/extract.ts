@@ -28,6 +28,7 @@ export interface ExtractResponse {
     costBreakdown?: CostBreakdown;
     stage1Flash?: CostBreakdown;
     stage1Pro?: CostBreakdown;
+    stage1Pro31?: CostBreakdown;
     stage2Flash?: CostBreakdown;
     durationMs?: number;
     error?: string;

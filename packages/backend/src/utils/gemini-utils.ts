@@ -32,6 +32,13 @@ const PRICE_2_5_PRO = {
     cacheRead: 0.125,   // 컨텍스트 캐시 읽기 (≤200K 토큰)
 } as const;
 
+// Gemini 3.1 Pro (gemini-3.1-pro-preview)
+const PRICE_3_1_PRO = {
+    input: 2.00,
+    output: 12.00,
+    cacheRead: 0.20,
+} as const;
+
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -64,10 +71,13 @@ export function extractUsage(response: unknown): TokenUsage {
     };
 }
 
-export type ModelType = '3-flash' | '2.5-pro';
+export type ModelType = '3-flash' | '2.5-pro' | '3.1-pro';
 
 export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): CostBreakdown['cost'] {
-    const price = model === '2.5-pro' ? PRICE_2_5_PRO : PRICE_3_FLASH;
+    let price;
+    if (model === '2.5-pro') price = PRICE_2_5_PRO;
+    else if (model === '3.1-pro') price = PRICE_3_1_PRO;
+    else price = PRICE_3_FLASH;
     const inputUsd = (usage.promptTokens / 1_000_000) * price.input;
     const outputUsd = ((usage.candidateTokens + usage.thinkingTokens) / 1_000_000) * price.output;
     const cacheReadUsd = (usage.cachedTokens / 1_000_000) * price.cacheRead;

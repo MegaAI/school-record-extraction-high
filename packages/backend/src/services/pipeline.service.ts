@@ -21,6 +21,7 @@ export class PipelineService {
         costBreakdown: CostBreakdown;
         stage1FlashBreakdown: CostBreakdown;
         stage1ProBreakdown: CostBreakdown;
+        stage1Pro31Breakdown: CostBreakdown;
         stage2Breakdown: CostBreakdown;
         durationMs: number;
         fieldDurationMs: Record<string, number>;
@@ -112,7 +113,8 @@ export class PipelineService {
             console.error('--- [Pipeline] Stage 1 이 모두 실패하여 Stage 2를 진행하지 않습니다 ---');
             const flashCost = calcCost(stage1Result.flashUsage, '3-flash');
             const proCost = calcCost(stage1Result.proUsage, '2.5-pro');
-            const totalUsd = flashCost.totalUsd + proCost.totalUsd;
+            const pro31Cost = calcCost(stage1Result.pro31Usage, '3.1-pro');
+            const totalUsd = flashCost.totalUsd + proCost.totalUsd + pro31Cost.totalUsd;
             return {
                 data: {},
                 errors: stage1Result.errors,
@@ -122,6 +124,7 @@ export class PipelineService {
                 },
                 stage1FlashBreakdown: { usage: stage1Result.flashUsage, cost: flashCost },
                 stage1ProBreakdown: { usage: stage1Result.proUsage, cost: proCost },
+                stage1Pro31Breakdown: { usage: stage1Result.pro31Usage, cost: pro31Cost },
                 stage2Breakdown: { usage: { promptTokens: 0, candidateTokens: 0, thinkingTokens: 0, cachedTokens: 0, totalTokens: 0 }, cost: { inputUsd: 0, outputUsd: 0, cacheReadUsd: 0, totalUsd: 0, totalKrw: 0 } },
                 durationMs: Date.now() - startTime,
                 fieldDurationMs,
@@ -226,14 +229,15 @@ export class PipelineService {
         // 모델별 비용 분리 계산
         const flashCost = calcCost(stage1Result.flashUsage, '3-flash');
         const proCost = calcCost(stage1Result.proUsage, '2.5-pro');
+        const pro31Cost = calcCost(stage1Result.pro31Usage, '3.1-pro');
         const stage2Cost = calcCost(stage2TotalUsage, '3-flash'); // Stage2는 Flash 모델
-        const totalUsd = flashCost.totalUsd + proCost.totalUsd + stage2Cost.totalUsd;
+        const totalUsd = flashCost.totalUsd + proCost.totalUsd + pro31Cost.totalUsd + stage2Cost.totalUsd;
         const costBreakdown: CostBreakdown = {
             usage: totalUsage,
             cost: {
-                inputUsd: flashCost.inputUsd + proCost.inputUsd + stage2Cost.inputUsd,
-                outputUsd: flashCost.outputUsd + proCost.outputUsd + stage2Cost.outputUsd,
-                cacheReadUsd: flashCost.cacheReadUsd + proCost.cacheReadUsd + stage2Cost.cacheReadUsd,
+                inputUsd: flashCost.inputUsd + proCost.inputUsd + pro31Cost.inputUsd + stage2Cost.inputUsd,
+                outputUsd: flashCost.outputUsd + proCost.outputUsd + pro31Cost.outputUsd + stage2Cost.outputUsd,
+                cacheReadUsd: flashCost.cacheReadUsd + proCost.cacheReadUsd + pro31Cost.cacheReadUsd + stage2Cost.cacheReadUsd,
                 totalUsd,
                 totalKrw: totalUsd * 1_350,
             },
@@ -242,12 +246,14 @@ export class PipelineService {
 
         const stage1FlashBreakdown: CostBreakdown = { usage: stage1Result.flashUsage, cost: flashCost };
         const stage1ProBreakdown: CostBreakdown = { usage: stage1Result.proUsage, cost: proCost };
+        const stage1Pro31Breakdown: CostBreakdown = { usage: stage1Result.pro31Usage, cost: pro31Cost };
         const stage2Breakdown: CostBreakdown = { usage: stage2TotalUsage, cost: stage2Cost };
 
         console.log(`✅ [Pipeline] 최종 파이프라인 완료 (소요시간: ${(durationMs / 1000).toFixed(1)}초)`);
         console.log(`💰 총 비용: $${totalUsd.toFixed(6)} (₩${costBreakdown.cost.totalKrw.toFixed(2)})`);
         console.log(`   ├ [Stage1] Gemini 3 Flash : $${flashCost.totalUsd.toFixed(6)} | 입력:${stage1Result.flashUsage.promptTokens.toLocaleString()}tok 출력:${stage1Result.flashUsage.candidateTokens.toLocaleString()}tok 캐시:${stage1Result.flashUsage.cachedTokens.toLocaleString()}tok think:${stage1Result.flashUsage.thinkingTokens.toLocaleString()}tok`);
         console.log(`   ├ [Stage1] Gemini 2.5 Pro : $${proCost.totalUsd.toFixed(6)} | 입력:${stage1Result.proUsage.promptTokens.toLocaleString()}tok 출력:${stage1Result.proUsage.candidateTokens.toLocaleString()}tok 캐시:${stage1Result.proUsage.cachedTokens.toLocaleString()}tok think:${stage1Result.proUsage.thinkingTokens.toLocaleString()}tok`);
+        console.log(`   ├ [Stage1] Gemini 3.1 Pro : $${pro31Cost.totalUsd.toFixed(6)} | 입력:${stage1Result.pro31Usage.promptTokens.toLocaleString()}tok 출력:${stage1Result.pro31Usage.candidateTokens.toLocaleString()}tok 캐시:${stage1Result.pro31Usage.cachedTokens.toLocaleString()}tok think:${stage1Result.pro31Usage.thinkingTokens.toLocaleString()}tok`);
         console.log(`   └ [Stage2] Gemini 3 Flash : $${stage2Cost.totalUsd.toFixed(6)} | 입력:${stage2TotalUsage.promptTokens.toLocaleString()}tok 출력:${stage2TotalUsage.candidateTokens.toLocaleString()}tok 캐시:${stage2TotalUsage.cachedTokens.toLocaleString()}tok think:${stage2TotalUsage.thinkingTokens.toLocaleString()}tok`);
 
         return {
@@ -256,6 +262,7 @@ export class PipelineService {
             costBreakdown,
             stage1FlashBreakdown,
             stage1ProBreakdown,
+            stage1Pro31Breakdown,
             stage2Breakdown,
             durationMs,
             fieldDurationMs,
