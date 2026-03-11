@@ -111,6 +111,27 @@ header p {
   background: #334155;
 }
 
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  background: linear-gradient(135deg, #065f46, #047857);
+  color: #6ee7b7;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
 /* 로딩 */
 .loading-box {
   display: flex;
@@ -261,4 +282,71 @@ header p {
 .total-krw {
   font-size: 0.9rem;
   color: #94a3b8;
+}
+
+/* 모델별 비용 내역 */
+.model-cost-section {
+  border: 1px solid #2d3748;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  background: #0d1b2a;
+}
+
+.model-cost-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+
+.model-cost-row {
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.model-cost-row:last-child {
+  margin-bottom: 0;
+}
+
+.model-cost-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.model-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.model-cost-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  flex: 1;
+}
+
+.model-cost-total {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+}
+
+.model-cost-detail {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.72rem;
+  color: #475569;
+  padding-left: 0.2rem;
 }

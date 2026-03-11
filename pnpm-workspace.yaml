@@ -1,2 +1,7 @@
 packages:
-  - 'packages/*'
+  - "packages/frontend"
+  - "packages/backend"
+  - "packages/prompt"
+  - "packages/schema"
+  - "packages/postprocessor"
+  - "packages/preprocessor"

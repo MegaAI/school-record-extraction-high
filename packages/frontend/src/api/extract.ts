@@ -8,15 +8,17 @@ export interface TokenUsage {
     totalTokens: number;
 }
 
+export interface ModelCost {
+    inputUsd: number;
+    outputUsd: number;
+    cacheReadUsd: number;
+    totalUsd: number;
+    totalKrw: number;
+}
+
 export interface CostBreakdown {
     usage: TokenUsage;
-    cost: {
-        inputUsd: number;
-        outputUsd: number;
-        cacheReadUsd: number;
-        totalUsd: number;
-        totalKrw: number;
-    };
+    cost: ModelCost;
 }
 
 export interface ExtractResponse {
@@ -24,6 +26,9 @@ export interface ExtractResponse {
     data?: Record<string, unknown>;
     errors?: Record<string, string>;
     costBreakdown?: CostBreakdown;
+    stage1Flash?: CostBreakdown;
+    stage1Pro?: CostBreakdown;
+    stage2Flash?: CostBreakdown;
     durationMs?: number;
     error?: string;
 }
