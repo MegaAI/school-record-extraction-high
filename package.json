@@ -10,5 +10,9 @@
     },
     "workspaces": [
         "packages/*"
-    ]
+    ],
+    "dependencies": {
+        "form-data": "^4.0.5",
+        "node-fetch": "^3.3.2"
+    }
 }

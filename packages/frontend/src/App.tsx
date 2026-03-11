@@ -22,19 +22,18 @@ function fmt(n: number): string {
     return n.toLocaleString();
 }
 
-function CostPanel({ cb, durationMs }: { cb: CostBreakdown; durationMs?: number }) {
-    const { usage, cost } = cb;
+function ModelCostRow({ label, model, data }: { label: string; model: string; data: CostBreakdown }) {
+    const { cost, usage } = data;
     return (
-        <div className="cost-panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h2 style={{ marginBottom: 0 }}>� 분석 요약</h2>
-                {durationMs && (
-                    <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                        ⏱️ 소요시간: <b style={{ color: '#e2e8f0', fontSize: '1rem' }}>{(durationMs / 1000).toFixed(1)}초</b>
-                    </span>
-                )}
+        <div className="model-cost-row" style={{ marginBottom: '1.5rem', padding: '1rem', background: '#1e293b', borderRadius: '8px' }}>
+            <div className="model-cost-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div>
+                    <span className="model-badge">{model}</span>
+                    <span className="model-cost-label" style={{ marginLeft: '0.5rem', fontWeight: 'bold' }}>{label}</span>
+                </div>
+                <span className="model-cost-total" style={{ color: '#fbbf24', fontWeight: 'bold' }}>${cost.totalUsd.toFixed(6)}</span>
             </div>
-            <div className="cost-grid">
+            <div className="cost-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="cost-item">
                     <span className="cost-label">입력 토큰</span>
                     <span className="cost-value">{fmt(usage.promptTokens)} tok</span>
@@ -45,22 +44,79 @@ function CostPanel({ cb, durationMs }: { cb: CostBreakdown; durationMs?: number 
                     <span className="cost-value">{fmt(usage.candidateTokens)} tok</span>
                     <span className="cost-sub">${cost.outputUsd.toFixed(6)}</span>
                 </div>
-                <div className="cost-item">
-                    <span className="cost-label">Thinking 토큰</span>
-                    <span className="cost-value thinking">{fmt(usage.thinkingTokens)} tok</span>
-                    <span className="cost-sub">출력 요금에 포함</span>
-                </div>
+                {usage.thinkingTokens > 0 && (
+                    <div className="cost-item">
+                        <span className="cost-label">Thinking 토큰</span>
+                        <span className="cost-value thinking">{fmt(usage.thinkingTokens)} tok</span>
+                        <span className="cost-sub">출력 요금에 포함</span>
+                    </div>
+                )}
                 <div className="cost-item">
                     <span className="cost-label">캐시 읽기 토큰</span>
                     <span className="cost-value cached">{fmt(usage.cachedTokens)} tok</span>
                     <span className="cost-sub">${cost.cacheReadUsd.toFixed(6)}</span>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function CostPanel({ cb, stage1Flash, stage1Pro, stage2Flash, durationMs }: {
+    cb: CostBreakdown;
+    stage1Flash?: CostBreakdown;
+    stage1Pro?: CostBreakdown;
+    stage2Flash?: CostBreakdown;
+    durationMs?: number;
+}) {
+    const { usage, cost } = cb;
+    return (
+        <div className="cost-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h2 style={{ marginBottom: 0 }}>◈ 분석 요약</h2>
+                {durationMs && (
+                    <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                        ⏱️ 소요시간: <b style={{ color: '#e2e8f0', fontSize: '1rem' }}>{(durationMs / 1000).toFixed(1)}초</b>
+                    </span>
+                )}
+            </div>
+
+            {/* 모델별 비용 breakdown */}
+            {(stage1Flash || stage1Pro || stage2Flash) && (
+                <div className="model-cost-section">
+                    <div className="model-cost-title">모델별 비용 내역</div>
+                    {stage1Flash && (
+                        <ModelCostRow
+                            label="Stage 1"
+                            model="Gemini 3 Flash"
+                            data={stage1Flash}
+                        />
+                    )}
+                    {stage1Pro && (
+                        <ModelCostRow
+                            label="Stage 1"
+                            model="Gemini 2.5 Pro (성적)"
+                            data={stage1Pro}
+                        />
+                    )}
+                    {stage2Flash && (
+                        <ModelCostRow
+                            label="Stage 2"
+                            model="Gemini 3 Flash (분류)"
+                            data={stage2Flash}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* 합산 총 비용 */}
             <div className="cost-total">
                 <span>총 비용</span>
-                <div>
-                    <span className="total-usd">${cost.totalUsd.toFixed(6)}</span>
-                    <span className="total-krw">≈ ₩{cost.totalKrw.toFixed(0)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div>
+                        <span className="total-usd">${cost.totalUsd.toFixed(6)}</span>
+                        <span className="total-krw">≈ ₩{cost.totalKrw.toFixed(0)}</span>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>(1달러=1,350원 근사치 산정)</span>
                 </div>
             </div>
         </div>
@@ -109,6 +165,20 @@ function App() {
 
     const handleReset = () => { setSelectedFile(null); setResult(null); setStatus('idle'); };
 
+    const handleExportJson = useCallback(() => {
+        if (!result?.data) return;
+        const now = new Date();
+        const ts = now.toISOString().replace('T', '_').replace(/:/g, '-').slice(0, 19);
+        const fileName = `new_school-record_${ts}.json`;
+        const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [result]);
+
     return (
         <div className="container">
             <header>
@@ -138,7 +208,10 @@ function App() {
             {status === 'loading' && (
                 <div className="loading-box">
                     <div className="spinner" />
-                    <p>분석 중... ({Object.keys(FIELD_LABELS).length}개 필드 병렬 처리)</p>
+                    <p>
+                        2-Stage 분석 중...<br />
+                        <small style={{ color: '#94a3b8' }}>Stage 1: 순수 텍스트 추출 ➔ Stage 2: 분류 코드 분리 유추</small>
+                    </p>
                 </div>
             )}
 
@@ -146,11 +219,28 @@ function App() {
 
             {status === 'success' && result && (
                 <>
-                    {result.costBreakdown && <CostPanel cb={result.costBreakdown} durationMs={result.durationMs} />}
+                    {result.costBreakdown && (
+                        <CostPanel
+                            cb={result.costBreakdown}
+                            stage1Flash={result.stage1Flash}
+                            stage1Pro={result.stage1Pro}
+                            stage2Flash={result.stage2Flash}
+                            durationMs={result.durationMs}
+                        />
+                    )}
 
                     {result.data && (
                         <div className="result-section">
-                            <h2>추출 결과</h2>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h2 style={{ margin: 0 }}>추출 결과</h2>
+                                <button
+                                    className="btn-export"
+                                    onClick={handleExportJson}
+                                    title="전체 데이터를 JSON 파일로 다운로드"
+                                >
+                                    ⬇️ JSON 내보내기
+                                </button>
+                            </div>
                             {result.errors && Object.keys(result.errors).length > 0 && (
                                 <div className="error-box">⚠️ 일부 필드 실패: {Object.keys(result.errors).join(', ')}</div>
                             )}
