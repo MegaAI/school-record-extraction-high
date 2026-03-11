@@ -45,10 +45,16 @@ pnpm install
 ```
 
 ### 2. 환경 변수 설정
-`packages/backend` 폴더 등에 `.env` 파일을 생성하고 다음 값을 추가하세요. (예시)
+`packages/backend` 폴더 내에 `.env` 파일을 생성하고 다음 값을 추가하세요. 구글 클라우드(GCP) Vertex AI 접근을 위한 환경 변수입니다.
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+# GCP Vertex AI 인증 및 프로젝트 설정
+GOOGLE_APPLICATION_CREDENTIALS=../../fit-galaxy-466700-t2-865a267b842b.json
+VERTEX_PROJECT=fit-galaxy-466700-t2
+VERTEX_LOCATION=us-central1  # 또는 설정한 리전
+
+# 서버 및 클라이언트 설정
 PORT=5174
+FRONTEND_URL=http://localhost:5173
 ```
 
 ### 3. 개발 서버 실행
