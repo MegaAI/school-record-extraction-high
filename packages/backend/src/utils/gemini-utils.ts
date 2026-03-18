@@ -1,20 +1,52 @@
-export interface TokenUsage {
-    promptTokens: number;
-    candidateTokens: number;
-    thinkingTokens: number;
-    cachedTokens: number;
-    totalTokens: number;
+export type { TokenUsage, ModelCost, CostBreakdown, DetailedEstimatedCost, CacheStorageInfo, DetailedCostDetails, ModelType } from '@school-record/shared';
+import type { TokenUsage, ModelCost, CostBreakdown, DetailedEstimatedCost, DetailedCostDetails, ModelType } from '@school-record/shared';
+import { GoogleGenAI } from '@google/genai';
+
+// ─── 공통 상수 ────────────────────────────────────────────────
+
+export const MAX_RETRIES = 3;
+
+/** generateContent / caches.create config에 공통으로 spread하는 Vertex AI 레이블 */
+export const GEMINI_REQUEST_LABELS = {
+    labels: {
+        feature: 'school-record_data-extraction-high',
+        environment: 'test',
+    },
+} as const;
+
+// ─── 공통 팩토리 ──────────────────────────────────────────────
+
+/** VERTEX_PROJECT 환경변수를 검증하고 GoogleGenAI 인스턴스를 반환한다 */
+export function createGenAI(): GoogleGenAI {
+    const project = process.env.VERTEX_PROJECT;
+    const location = process.env.VERTEX_LOCATION ?? 'global';
+    if (!project) throw new Error('VERTEX_PROJECT 환경변수가 설정되지 않았습니다.');
+    return new GoogleGenAI({ vertexai: true, project, location });
 }
 
-export interface CostBreakdown {
-    usage: TokenUsage;
-    cost: {
-        inputUsd: number;
-        outputUsd: number;
-        cacheReadUsd: number;
-        totalUsd: number;
-        totalKrw: number;
-    };
+// ─── 재시도 유틸 ──────────────────────────────────────────────
+
+/**
+ * fn을 최대 maxRetries회 실행한다.
+ * 실패 시 isRetriable이면 지수 백오프 후 재시도, 아니면 즉시 throw.
+ * onRetry: 재시도 직전에 호출되는 콜백 (로깅 등)
+ */
+export async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    onRetry?: (attempt: number, delayMs: number) => void,
+    maxRetries: number = MAX_RETRIES,
+): Promise<T> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (attempt === maxRetries || !isRetriable(error)) throw error;
+            const delay = 1000 * Math.pow(2, attempt - 1);
+            onRetry?.(attempt, delay);
+            await sleep(delay);
+        }
+    }
+    throw new Error('최대 재시도 초과');
 }
 
 // ─── 요금표 (USD / 1M 토큰) ──────────────────────────────────
@@ -23,13 +55,26 @@ const PRICE_3_FLASH = {
     input: 0.50,        // 텍스트 / 이미지 / 동영상 입력
     output: 3.00,       // 출력 (thinking 포함)
     cacheRead: 0.05,    // 컨텍스트 캐시 읽기
+    cacheStoragePerHour: 0,
 } as const;
 
-// Gemini 2.5 Pro (gemini-2.5-pro) - 200K 토큰 이하 기준
-const PRICE_2_5_PRO = {
-    input: 1.25,        // 입력 (≤200K 토큰)
-    output: 10.00,      // 출력, thinking 포함 (≤200K 토큰)
-    cacheRead: 0.125,   // 컨텍스트 캐시 읽기 (≤200K 토큰)
+const GEMINI_3_1_PRO_TIER_THRESHOLD = 200_000;
+
+// Gemini 3.1 Pro Preview (gemini-3.1-pro / gemini-3.1-pro-preview)
+// 기준: 프롬프트 토큰 수 200,000개 이하 / 초과
+const PRICE_3_1_PRO = {
+    small: {
+        input: 2.00,
+        output: 12.00,
+        cacheRead: 0.20,
+        cacheStoragePerHour: 4.50,
+    },
+    large: {
+        input: 4.00,
+        output: 18.00,
+        cacheRead: 0.40,
+        cacheStoragePerHour: 4.50,
+    },
 } as const;
 
 export function sleep(ms: number) {
@@ -64,10 +109,15 @@ export function extractUsage(response: unknown): TokenUsage {
     };
 }
 
-export type ModelType = '3-flash' | '2.5-pro';
+function getPriceTable(model: ModelType, usage: TokenUsage) {
+    const totalPromptTokens = usage.promptTokens + usage.cachedTokens;
+    return model === '3.1-pro'
+        ? (totalPromptTokens > GEMINI_3_1_PRO_TIER_THRESHOLD ? PRICE_3_1_PRO.large : PRICE_3_1_PRO.small)
+        : PRICE_3_FLASH;
+}
 
-export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): CostBreakdown['cost'] {
-    const price = model === '2.5-pro' ? PRICE_2_5_PRO : PRICE_3_FLASH;
+export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): ModelCost {
+    const price = getPriceTable(model, usage);
     const inputUsd = (usage.promptTokens / 1_000_000) * price.input;
     const outputUsd = ((usage.candidateTokens + usage.thinkingTokens) / 1_000_000) * price.output;
     const cacheReadUsd = (usage.cachedTokens / 1_000_000) * price.cacheRead;
@@ -79,6 +129,46 @@ export function calcCost(usage: TokenUsage, model: ModelType = '3-flash'): CostB
         totalUsd,
         totalKrw: totalUsd * 1_350,
     };
+}
+
+export function buildDetailedCostDetails(
+    usage: TokenUsage,
+    model: ModelType,
+    options: { storageTimeSeconds?: number; includeCacheStorage?: boolean } = {}
+): DetailedCostDetails {
+    const price = getPriceTable(model, usage);
+    const outputTokenCount = usage.candidateTokens + usage.thinkingTokens;
+    const inputCost = (usage.promptTokens / 1_000_000) * price.input;
+    const cachedInputCost = (usage.cachedTokens / 1_000_000) * price.cacheRead;
+    const outputCost = (outputTokenCount / 1_000_000) * price.output;
+    const storageTimeSeconds = options.storageTimeSeconds ?? 0;
+    const cacheStorageCost = options.includeCacheStorage
+        ? (usage.cachedTokens / 1_000_000) * price.cacheStoragePerHour * (storageTimeSeconds / 3600)
+        : 0;
+    const estimatedCost: DetailedEstimatedCost = {
+        inputCost,
+        cachedInputCost,
+        outputCost,
+        cacheStorageCost,
+        totalCost: inputCost + cachedInputCost + outputCost + cacheStorageCost,
+    };
+
+    const costDetails: DetailedCostDetails = {
+        nonCachedInputTokenCount: usage.promptTokens,
+        cachedInputTokenCount: usage.cachedTokens,
+        outputTokenCount,
+        estimatedCost,
+    };
+
+    if (options.includeCacheStorage && usage.cachedTokens > 0 && storageTimeSeconds > 0) {
+        costDetails.cacheStorageInfo = {
+            cachedTokenCount: usage.cachedTokens,
+            storageTimeSeconds,
+            storageCost: cacheStorageCost,
+        };
+    }
+
+    return costDetails;
 }
 
 export function extractTextFromResponse(response: unknown): string {

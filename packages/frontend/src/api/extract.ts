@@ -1,37 +1,8 @@
+import type { TokenUsage, ModelCost, CostBreakdown, DetailedCostDetails, ExtractResponse } from '@school-record/shared';
+
+export type { TokenUsage, ModelCost, CostBreakdown, DetailedCostDetails, ExtractResponse };
+
 const API_BASE = '/api';
-
-export interface TokenUsage {
-    promptTokens: number;
-    candidateTokens: number;
-    thinkingTokens: number;
-    cachedTokens: number;
-    totalTokens: number;
-}
-
-export interface ModelCost {
-    inputUsd: number;
-    outputUsd: number;
-    cacheReadUsd: number;
-    totalUsd: number;
-    totalKrw: number;
-}
-
-export interface CostBreakdown {
-    usage: TokenUsage;
-    cost: ModelCost;
-}
-
-export interface ExtractResponse {
-    success: boolean;
-    data?: Record<string, unknown>;
-    errors?: Record<string, string>;
-    costBreakdown?: CostBreakdown;
-    stage1Flash?: CostBreakdown;
-    stage1Pro?: CostBreakdown;
-    stage2Flash?: CostBreakdown;
-    durationMs?: number;
-    error?: string;
-}
 
 export async function extractFromPdf(file: File): Promise<ExtractResponse> {
     const formData = new FormData();

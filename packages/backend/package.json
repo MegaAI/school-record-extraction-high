@@ -9,6 +9,7 @@
         "start": "node dist/server.js"
     },
     "dependencies": {
+        "@school-record/shared": "workspace:*",
         "@gemini-data-extraction/postprocessor": "workspace:*",
         "@gemini-data-extraction/preprocessor": "workspace:*",
         "@gemini-data-extraction/schema": "workspace:*",

@@ -29,6 +29,9 @@ importers:
       '@google/genai':
         specifier: ^1.41.0
         version: 1.42.0
+      '@school-record/shared':
+        specifier: workspace:*
+        version: link:../shared
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -66,6 +69,9 @@ importers:
 
   packages/frontend:
     dependencies:
+      '@school-record/shared':
+        specifier: workspace:*
+        version: link:../shared
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -131,6 +137,12 @@ importers:
       '@google/genai':
         specifier: ^1.41.0
         version: 1.42.0
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/shared:
     devDependencies:
       typescript:
         specifier: ^5.7.2
