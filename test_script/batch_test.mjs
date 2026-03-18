@@ -13,47 +13,61 @@ import fetch from 'node-fetch';
 // ──────────────────────────────────────────────
 // 설정
 // ──────────────────────────────────────────────
-const API_URL = 'http://localhost:5174/api/extract';
+const API_URL = 'http://localhost:3101/api/extract';
+const TOTAL_ITERATIONS = 7;
+const FIELD_STATS_ORDER = [
+    'autonomous_activities',
+    'club_activities',
+    'career_activities',
+    'volunteer_activities',
+    'attendance',
+    'awards',
+    'behavior_comments',
+    'license',
+    'reading_activities',
+    'student_grades',
+    'subject_details',
+];
 
 const SAMPLES_DIR = 'D:\\업무\\AI 개발\\입시전략연구소_고교동행\\(입시서비스팀)생기부 데이터 추출\\샘플들\\세특';
-const OUTPUT_DIR = 'D:\\업무\\AI 개발\\입시전략연구소_고교동행\\(입시서비스팀)생기부 데이터 추출\\260303_제미나이3_정확도개선\\1차_세특_HIGH';
+const OUTPUT_DIR = 'D:\\업무\\AI 개발\\입시전략연구소_고교동행\\(입시서비스팀)생기부 데이터 추출\\260310_제미나이3_마이그레이션\\[제미나이3 flash_agentic vision]1차공유_260312';
 
-/** 파일명에서 폴더명으로 사용할 안전한 이름 반환 (확장자 제거) */
 function safeFolderName(filename) {
     return path.basename(filename, path.extname(filename));
 }
 
-/** PDF 파일 목록 조회 */
-// function getPdfFiles() {
-//     const files = [
-//         '샘플30.pdf',
-//         '샘플31.pdf',
-//         '샘플31_Failed to fetch.pdf'
-//     ];
-//     console.log(`📁 배열 강제 지정: 지정된 PDF 처리합니다.\n`);
-//     return files;
-// }
-
 function getPdfFiles() {
-    const files = ['샘플35.pdf'];
-    console.log(`📁 단일 파일 스캔: 총 ${files.length}개의 PDF를 처리합니다.\n`);
+    if (!fs.existsSync(SAMPLES_DIR)) {
+        throw new Error(`샘플 폴더를 찾을 수 없습니다: ${SAMPLES_DIR}`);
+    }
+
+    const files = fs.readdirSync(SAMPLES_DIR, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.pdf'))
+        .map((entry) => entry.name)
+        .sort((a, b) => a.localeCompare(b, 'ko'));
+
+    console.log(`📁 폴더 전체 스캔: 총 ${files.length}개의 PDF를 처리합니다.\n`);
     return files;
 }
 
-// function getPdfFiles() {
-//     const failedList = [
-//         '샘플01_세특 1,2학기 구분.pdf',
-//         // '샘플35.pdf',
-//         '샘플22_진로탐색중.pdf',
-//         '샘플32-------독서, 진로활동 1,2학기 구분.pdf',
-//         '샘플_2-2까지.pdf',
-//         '샘플_3-1까지.pdf'
-//     ];
-//     console.log(`📁 실패 항목 재처리: 총 ${failedList.length}개의 PDF를 처리합니다.\n`);
-//     return failedList;
-// }
+function orderFieldStats(fieldStats = {}) {
+    const orderedEntries = [];
 
-/** 단일 PDF 파일 추출 API 호출 */
+    for (const fieldKey of FIELD_STATS_ORDER) {
+        if (fieldKey in fieldStats) {
+            orderedEntries.push([fieldKey, fieldStats[fieldKey]]);
+        }
+    }
+
+    for (const [fieldKey, value] of Object.entries(fieldStats)) {
+        if (!FIELD_STATS_ORDER.includes(fieldKey)) {
+            orderedEntries.push([fieldKey, value]);
+        }
+    }
+
+    return Object.fromEntries(orderedEntries);
+}
+
 async function extractPdf(filePath) {
     const form = new FormData();
     form.append('pdf', fs.createReadStream(filePath), {
@@ -74,19 +88,16 @@ async function extractPdf(filePath) {
     return json;
 }
 
-/** 결과를 지정 폴더에 저장 */
 function saveResult(folderName, result, elapsedMs, baseOutputDir = OUTPUT_DIR) {
     const outDir = path.join(baseOutputDir, folderName);
     fs.mkdirSync(outDir, { recursive: true });
 
-    // 추출된 데이터 전체 (gemini-ocr 호환 포맷: parsed_data로 감싸기)
     fs.writeFileSync(
         path.join(outDir, 'result.json'),
         JSON.stringify({ parsed_data: result.data }, null, 2),
         'utf-8'
     );
 
-    // 출결봉사 전용 (activities + attendance)
     const resultAttendanceVolunteer = {
         parsed_data: {
             activities: result.data?.activities ?? null,
@@ -99,7 +110,6 @@ function saveResult(folderName, result, elapsedMs, baseOutputDir = OUTPUT_DIR) {
         'utf-8'
     );
 
-    // 세특 전용 (subject_details)
     const resultSubjectDetails = {
         parsed_data: {
             subject_details: result.data?.subject_details ?? null,
@@ -111,28 +121,21 @@ function saveResult(folderName, result, elapsedMs, baseOutputDir = OUTPUT_DIR) {
         'utf-8'
     );
 
-    // 비용 / 토큰 요약
-    const costSummary = {
-        durationMs: result.durationMs,
-        // 필드별 소요 시간 (ms): 각 Stage 1 필드의 개별 처리 시간
-        fieldDurationMs: result.fieldDurationMs ?? {},
-        elapsedMs,
-        costBreakdown: result.costBreakdown,
-        stage1Flash: result.stage1Flash,
-        stage1Pro: result.stage1Pro,
-        stage2Flash: result.stage2Flash,
-        errors: result.errors,
-    };
     fs.writeFileSync(
         path.join(outDir, 'cost.json'),
-        JSON.stringify(costSummary, null, 2),
+        JSON.stringify({
+            totalProcessingTimeMs: result.processingTimeMs,
+            totalElapsedMs: elapsedMs,
+            totalCostDetails: result.usageMetadata?.costDetails || null,
+            fieldStats: orderFieldStats(result.fieldStats || {}),
+            usageSummary: result.usageMetadata || null,
+        }, null, 2),
         'utf-8'
     );
 
     console.log(`   💾 저장 완료 → ${outDir}`);
 }
 
-/** 에러를 지정 폴더에 저장 */
 function saveError(folderName, errorMsg, baseOutputDir = OUTPUT_DIR) {
     const outDir = path.join(baseOutputDir, folderName);
     fs.mkdirSync(outDir, { recursive: true });
@@ -146,24 +149,19 @@ function saveError(folderName, errorMsg, baseOutputDir = OUTPUT_DIR) {
     console.error(`   💾 에러 저장 → ${outDir}/error.json`);
 }
 
-// ──────────────────────────────────────────────
-// 메인 실행
-// ──────────────────────────────────────────────
 async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
     const pdfFiles = getPdfFiles();
-
-    // 3개씩 청크 분할
     const chunkSize = 7;
     const chunks = [];
     for (let i = 0; i < pdfFiles.length; i += chunkSize) {
         chunks.push(pdfFiles.slice(i, i + chunkSize));
     }
 
-    for (let iter = 1; iter <= 1; iter++) {
+    for (let iter = 1; iter <= TOTAL_ITERATIONS; iter++) {
         console.log(`\n==================================================`);
-        console.log(`=== 🔄 [반복 실행: ${iter} / 7] 시작 ===`);
+        console.log(`=== 🔄 [반복 실행: ${iter} / ${TOTAL_ITERATIONS}] 시작 ===`);
         console.log(`==================================================\n`);
 
         const iterOutputDir = path.join(OUTPUT_DIR, `iter_${iter}`);
@@ -187,8 +185,9 @@ async function main() {
                     const result = await extractPdf(filePath);
                     const elapsed = Date.now() - start;
 
-                    const cost = result.costBreakdown?.cost;
-                    console.log(`   ✅ 완료 (${(elapsed / 1000).toFixed(1)}초) | $${cost?.totalUsd?.toFixed(6) ?? '?'} ≈ ₩${cost?.totalKrw?.toFixed(0) ?? '?'} [${filename}]`);
+                    const cost = result.usageMetadata?.costDetails;
+                    const totalCost = cost?.estimatedCost?.totalCost ?? cost?.totalCost;
+                    console.log(`   ✅ 완료 (${(elapsed / 1000).toFixed(1)}초) | $${totalCost?.toFixed(6) ?? '?'} [${filename}]`);
 
                     saveResult(folderName, result, elapsed, iterOutputDir);
                     results.success.push(filename);
@@ -200,23 +199,20 @@ async function main() {
                 }
             }));
 
-            // 연속 호출 간 throttle 방지 대기 (5초) (마지막 묶음 제외)
             if (c < chunks.length - 1) {
                 console.log('   ⏳ 병렬 처리 후 5초 대기 중...');
                 await new Promise(r => setTimeout(r, 5000));
             }
         }
 
-        // 최종 요약
         console.log('\n' + '='.repeat(60));
         console.log(`📊 [반복 ${iter}] 최종 결과: 성공 ${results.success.length}개 / 실패 ${results.failed.length}개`);
         if (results.failed.length > 0) {
             console.log(`\n❌ [반복 ${iter}] 실패 목록:`);
-            results.failed.forEach(f => console.log(`   - ${f.filename}: ${f.error}`));
+            results.failed.forEach((item) => console.log(`   - ${item.filename}: ${item.error}`));
         }
 
-        // 반복 간 대기 (마지막 반복 제외)
-        if (iter < 7) {
+        if (iter < TOTAL_ITERATIONS) {
             console.log(`\n   ⏳ 다음 반복 실행 전 10초 대기 중...`);
             await new Promise(r => setTimeout(r, 10000));
         }
@@ -225,7 +221,7 @@ async function main() {
     console.log(`\n📁 모든 반복 실행 완료. 결과 저장 위치: ${OUTPUT_DIR}`);
 }
 
-main().catch(err => {
+main().catch((err) => {
     console.error('스크립트 실패:', err);
     process.exit(1);
 });
